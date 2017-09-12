@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zara.zio.LogBoardMapper">
+	
+	<!-- 로그, 커뮤, qna등록  -->
+	<insert id="Loginfo">
+		insert into board(board_code, board_title, board_content, share_type, board_type_code, viewCount, user_id, step_log_code) 
+		values (#{board_code}, #{board_title}, #{board_content}, #{share_type}, #{board_type_code}, #{viewCount}, #{user_id}, #{step_log_code})
+	</insert>
+	<insert id="Loghash">
+		insert into hash_tag(hash_tag_content, board_code)
+		values (#{hash}, #{cnt})
+	</insert>
+	<insert id="Logimgfile">
+		insert into attached_file(file_content, file_type, board_code)
+		values (#{image}, #{type}, #{cnt})
+	</insert>
+	<select id="maxcode" resultType="java.util.HashMap">
+		SELECT max(board_code) max, count(board_code) count
+		from board
+	</select>
+	
+	<!-- 로그리스트 읽는맵퍼 -->
+	<select id="infoRead" resultType="LogBoardVO" parameterType="hashmap">
+		<!-- 
+		select a.*, b.user_profile, c.place_img, d.group_count
+		from board a
+		left join user_info b
+		on a.user_id = b.user_id
+		left join (select a.group_Code group_Code, a.place_code place_code, b.place_img place_img
+				   from travel_list a
+				   left join pimg_tbl b
+				   on a.place_code = b.place_code
+				   where b.img_code = 0
+				   and a.travel_Priority = 1
+				   group by group_Code) c
+		on a.group_Code = c.group_Code
+		left join (select group_Code, count(group_Code) group_count
+				   from group_application
+				   group by group_Code) d
+		on a.group_Code = d.group_Code      
+		where a.board_type_code != 4 and a.board_type_code != 5
+		and share_type = 1
+		-->
+		select a.*, b.user_profile, c.place_img, d.group_count, e.start_Date
+		from (select *
+			  from board
+			  where group_Code is null
+			  union
+			  SELECT *
+			  from board
+			  where group_Code is not null 
+			  group by group_Code) a
+		left join user_info b
+		on a.user_id = b.user_id
+		left join (select a.group_Code group_Code, a.place_code place_code, b.place_img place_img
+				   from travel_list a
+				   left join pimg_tbl b
+				   on a.place_code = b.place_code
+				   where b.img_code = 0
+				   and a.travel_Priority = 1
+				   group by group_Code) c
+		on a.group_Code = c.group_Code
+		left join (select a.group_Code group_Code, count(a.group_Code) group_count
+				   from (select group_Code
+						 from group_application
+					     where group_Apply != 0) a
+				   group by group_Code) d
+		on a.group_Code = d.group_Code
+		left join travel_group e
+        on a.group_Code = e.group_Code
+		where a.board_type_code != 4 and a.board_type_code != 5 and (d.group_Code is null or place_img is not null)
+		and share_type = 1 and board_date <![CDATA[ < now() ]]> 
+		<include refid="logtype"></include>
+		order by board_date desc
+		limit #{startRecord}, #{timeLineNum}
+	</select>
+	<select id="hashRead" resultType="FileAndHashVO" parameterType="hashmap">
+		<!--
+		select a.hash_tag_content hash_tag_content, a.board_code board_code
+		from hash_tag a
+		right join (SELECT board_code, count(board_code) AS cnt
+		   			FROM hash_tag
+		   			group by board_code
+           			order by board_code desc
+           			limit #{startRecord}, #{timeLineNum}) b
+		on a.board_code = b.board_code
+		-->
+		select a.hash_tag_content hash_tag_content, a.board_code board_code
+		from hash_tag a
+		right join (SELECT a.* 
+					FROM (select board_code, board_date, share_type, board_type_code, group_Code
+						  from board
+						  where group_Code is null
+						  union
+						  SELECT board_code, board_date, share_type, board_type_code, group_Code
+						  from board
+						  where group_Code is not null 
+						  group by group_Code) a
+					where a.board_type_code != 4 and a.board_type_code != 5 and group_Code is null
+					and share_type = 1 and board_date <![CDATA[ < now() ]]> 
+					<include refid="logtype"></include>
+					order by board_date desc
+					limit #{startRecord}, #{timeLineNum}) b
+		on a.board_code = b.board_code
+		where hash_tag_content is not null
+	</select>
+	<select id="imgfileRead" resultType="FileAndHashVO" parameterType="hashmap">
+		<!--
+		select a.file_content file_content, a.board_code board_code
+		from attached_file a
+		right join (SELECT board_code, count(board_code) AS cnt
+					FROM attached_file
+					group by board_code
+					order by board_code desc
+					limit #{startRecord}, #{timeLineNum}) b
+		on a.board_code = b.board_code
+		-->
+		select a.file_content file_content, a.board_code board_code
+		from attached_file a
+		right join (SELECT a.* 
+					FROM (select board_code, board_date, share_type, board_type_code, group_Code
+						  from board
+						  where group_Code is null
+						  union
+						  SELECT board_code, board_date, share_type, board_type_code, group_Code
+						  from board
+						  where group_Code is not null 
+						  group by group_Code) a
+					where a.board_type_code != 4 and a.board_type_code != 5 and group_Code is null
+					and share_type = 1 and board_date <![CDATA[ < now() ]]> 
+					<include refid="logtype"></include>
+					order by board_date desc
+					limit #{startRecord}, #{timeLineNum}) b
+		on a.board_code = b.board_code
+		where file_content is not null 
+	</select>
+	
+	<sql id="logtype">
+		<if test="type==0">
+		</if>
+		<if test="type==1">
+			and board_type_code = #{type}
+		</if>
+		<if test="type==2">
+			and board_type_code = #{type}
+		</if>
+		<if test="type==3">
+			and board_type_code = #{type}
+		</if>
+	</sql>
+	
+	<!-- 좋아요, 내 좋아요 상태  -->
+	<select id="likeCounts" resultType="LikesVO">
+		select board_code, count(board_code) AS cnt
+		from board_like
+		group by board_code
+	</select>
+	<select id="likeMy" resultType="LikesVO">
+		select board_code 
+		from board_like
+		where user_id = #{id}
+	</select>
+	<insert id="likeUp">
+		insert into board_like(user_id, board_code)
+		values (#{user_id}, #{board_code})
+	</insert>
+	<delete id="likeDown">
+		delete from board_like 
+		where user_id = #{user_id}
+		and board_code = #{board_code}
+	</delete>
+	<select id="likeState" resultType="LikesVO">
+		select count(board_code) AS cnt
+		from board_like
+		where board_code = #{no}
+		group by board_code
+	</select>
+	
+	<!-- 조회수 업데이트 조회 -->
+	<update id="viewCount">
+		update board set viewCount = viewCount + 1
+		where board_code = #{no}
+	</update>
+	<select id="viewSearch" resultType="int">
+		select viewCount
+		from board
+		where board_code = #{no}
+	</select>
+	
+	
+	<!-- 댓글맵퍼 -->
+	<select id="replyList" resultType="LogBoardVO">
+		select a.board_code board_code, a.board_content board_content, a.board_date board_date, a.board_type_code board_type_code, 
+		a.user_id user_id, a.reply_code reply_code, a.write_type write_type, b.user_profile user_profile
+		from board a, user_info b
+		where a.user_id = b.user_id
+		and reply_code = #{no} and board_type_code = 6 
+		order by board_date
+	</select>
+	<insert id="replyWrite">
+		insert into board (board_content ,board_type_code , write_type, user_id, reply_code)
+		values (#{board_content}, #{board_type_code}, #{write_type}, #{user_id}, #{reply_code})
+	</insert>
+	<update id="replyModify">
+		update board set board_content=#{board_content}
+		where board_code = #{reply_code}
+	</update>
+	<delete id="replyDelete">
+		delete from board 
+		where board_code = #{replyno}
+	</delete>
+	
+	<!-- 스탭로그 정보 가져오기, 해쉬태그정보 -->
+	<select id="stepLogs" resultType="StepLogVO">	
+		select a.board_code board_code, a.board_title board_title, a.board_content board_content, a.board_date board_date, a.log_longtitude log_longtitude, a.log_latitude log_latitude, 
+		a.step_log_code step_log_code, a.user_id user_id, a.viewCount viewCount, a.write_type write_type, b.file_content fileimg, ifnull(c.cnt, 0) likecount, d.user_profile user_profile
+		from board a
+		left join attached_file b
+		on a.board_code = b.board_code
+		left join (select board_code, count(board_code) AS cnt
+									 from board_like
+									 group by board_code) c
+		on a.board_code = c.board_code
+        left join user_info d
+        on a.user_id = d.user_id
+        where step_log_code = #{no}
+		and board_type_code = 1
+		<!-- select a.*, ifnull(b.cnt, 0) likecount
+		from (select a.board_code board_code, a.board_title board_title, a.board_date board_date, a.log_longtitude log_longtitude, a.log_latitude log_latitude, 
+		a.step_log_code step_log_code, a.user_id user_id, a.viewCount viewCount, b.file_content fileimg
+				from board a
+				left join attached_file b
+				on a.board_code = b.board_code
+				where step_log_code = #{no}
+				and board_type_code = 1) a
+		        left join (select board_code, count(board_code) AS cnt
+											 from board_like
+											 group by board_code) b
+		on a.board_code = b.board_code -->
+	</select>
+	<select id="stepLogs2" resultType="FileAndHashVO">
+		select a.hash_tag_content hash_tag_content, a.board_code board_code
+		from hash_tag a, board b
+		where a.board_code = b.board_code
+		and b.step_log_code = #{no}
+		and b.board_type_code = 1
+	</select>
+	
+	
+	<!-- 커뮤니티 읽는 맵퍼  -->
+	<select id="comunityList" resultType="ComunityVO" parameterType="zara.zio.turn.domain.PaginationE">
+		select a.board_code board_code, a.board_title board_title, a.board_date board_date, 
+		a.viewCount viewCount, a.user_id user_id, b.reply_count reply_count
+		from board a
+		left join (select reply_code, count(reply_code) reply_count
+				   from board
+				   where board_type_code = 6
+		           group by reply_code) b
+		on a.board_code = b.reply_code   
+		<include refid="key"></include>
+		order by board_code desc
+		limit #{startRecord}, #{recordPage}
+	</select>
+	
+	<select id="comuTotalCount" resultType="Integer" parameterType="zara.zio.turn.domain.PaginationE">
+		select count(*)
+		from board
+		<include refid="key"></include>
+	</select>
+	
+	<sql id="key">
+		<choose>
+			<when test="keyword == ''">
+				where board_type_code = 4
+			</when>
+			<otherwise>
+				where board_title like CONCAT('%', #{keyword}, '%')
+				and board_type_code = 4
+				or board_content like CONCAT('%', #{keyword}, '%')
+				and board_type_code = 4
+			</otherwise>
+		</choose>
+	</sql>
+	
+	<select id="comunityRead" resultType="ComunityVO">
+		select a.board_code board_code, a.board_title board_title, a.board_content board_content, 
+		a.board_date board_date, a.viewCount viewCount, a.user_id user_id, b.user_profile user_profile
+		from board a, user_info b
+		where a.user_id = b.user_id
+		and a.board_type_code = 4
+		and a.board_code = #{page}
+	</select>
+	
+	<select id="comunityfileRead" resultType="java.util.HashMap">
+		select file_code, file_content
+		from attached_file
+		where board_code = #{page}
+		order by file_code
+	</select>
+	
+	<update id="comunityView">
+		update board set viewCount = viewCount + 1
+		where board_code = #{no}
+	</update>
+	
+	<select id="comunityAllCount" resultType="int">
+		select count(board_code) count
+		from board
+		where board_type_code = 4
+	</select>
+	
+	<select id="comunityRecent" resultType="ComunityVO">
+		select a.board_code board_code, a.board_title board_title, 
+		a.board_date board_date, a.user_id user_id, b.user_profile user_profile
+		from board a
+		left join user_info b
+		on a.user_id = b.user_id
+		where board_type_code = 4
+		order by board_date desc
+		limit 0, 6
+	</select>
+
+	
+	<delete id="comunityfileDel">
+		delete from attached_file where file_code = #{target}
+	</delete>
+	<insert id="comunityfileAdd">
+		insert into attached_file(file_content, file_type, board_code)
+		values (#{file_name}, #{type}, #{page})
+	</insert>
+	
+	<update id="conmunityUpdate">
+		update board set board_title=#{vo.board_title}, board_content=#{vo.board_content} 
+		where board_code = #{page}
+	</update>
+	
+	<!-- log, comu, travel 모든삭제 -->
+	<delete id="boardAllDel">
+		delete from board where board_code = #{page}
+	</delete>
+	
+	<delete id="boardfileAllDel">
+		delete from attached_file where board_code = #{page}
+	</delete>
+	
+	<delete id="boardhashAllDel">
+		delete from hash_tag where board_code = #{page}
+	</delete>
+	
+	<!-- 커뮤니티 댓글 커맨드 -->
+	<insert id="replyComuWrite">
+		insert into board(board_code, board_content, board_type_code, user_id, reply_code) 
+		values (#{board_code}, #{board_content}, 6, #{user_id}, #{reply_code})
+	</insert>
+	
+	<update id="replyComuModify">
+		update board set board_content=#{board_content}
+		where board_code = #{board_code}
+	</update>
+	
+	<delete id="replyComuDelete">
+		delete from board
+		where board_code = #{no}
+	</delete>
+	
+	<select id="replyComuList" resultType="ReplyInfoVO" parameterType="hashmap">		
+		select a.board_code board_code, a.board_content board_content, a.board_date board_date, a.board_type_code board_type_code, 
+		a.reply_code reply_code, a.user_id user_id, b.user_profile user_profile, c.count count, c.user_id confirm_id
+		from board a
+		left join user_info b
+		on a.user_id = b.user_id
+		left join (select x.board_code board_code, count(x.board_code) count, y.user_id user_id
+				   from reply_like_best x
+				   left join (select board_code, user_id
+							  from reply_like_best
+							  where user_id = #{user}) y
+				   on x.board_code = y.board_code
+		           where reply_code = #{replyno}
+				   group by board_code) c
+		on a.board_code = c.board_code
+		where board_type_code = 6
+		and reply_code = #{replyno}
+		order by board_date
+	</select>
+	
+	<select id="replyComuRank" resultType="ReplyInfoVO" parameterType="hashmap">
+		select a.board_code board_code, a.board_content board_content, a.board_date board_date, a.board_type_code board_type_code, 
+		a.reply_code reply_code, a.user_id user_id, b.user_profile user_profile, c.count count, c.user_id confirm_id
+		from board a
+		left join user_info b
+		on a.user_id = b.user_id
+		left join (select x.board_code board_code, count(x.board_code) count, y.user_id user_id
+				   from reply_like_best x
+				   left join (select board_code, user_id
+							  from reply_like_best
+							  where user_id = #{user}) y
+				   on x.board_code = y.board_code
+				   where reply_code = #{replyno}
+				   group by board_code) c
+		on a.board_code = c.board_code
+		where board_type_code = 6
+		and reply_code = #{replyno}
+		order by count desc
+		limit 0,3
+	</select>
+	
+	<insert id="replyComuLike">
+		insert into reply_like_best(board_code, user_id, reply_code)
+		values (#{board_code}, #{user_id}, #{reply_code})
+	</insert>
+	
+	<select id="travel_log" resultType="LogBoardVO">
+		select a.*, b.user_profile, c.start_Date, c.end_Date, d.group_count
+		from board a
+		left join user_info b
+		on a.user_id = b.user_id
+		left join travel_group c
+		on a.group_Code = c.group_Code
+		left join (select a.group_Code group_Code, count(a.group_Code) group_count
+				   from (select group_Code
+						 from group_application
+					     where group_Apply != 0
+					     and group_Code = #{group}) a
+				   group by group_Code) d
+		on a.group_Code = d.group_Code      
+		where a.board_code = #{no}
+	</select>
+	
+	<select id="travel_day_place" resultType="TravelListVO">
+		select a.*, b.place_lat, b.place_lng, b.place_name, b.place_content, b.place_address, b.place_type, c.place_img 
+		from (select * from travel_list 
+			  where group_Code = #{group}
+		      order by travel_Priority) a 
+		left join place_tbl b 
+		on a.place_code = b.place_code 
+		left join pimg_tbl c 
+		on a.place_code = c.place_code 
+		where c.img_code = 0
+		and travel_Date = #{selectDate}
+	</select>
+	
+	
+	
+	<select id="travel_log_post" resultType="LogBoardVO">
+		select a.*, b.user_profile
+		from board a
+		left join user_info b
+		on a.user_id = b.user_id
+		where a.group_Code = #{group}
+		and share_type = 1
+		and board_date between timestamp(#{start}) and timestamp(#{end})
+		and board_content != '0'
+		order by board_date
+	</select>
+	<!-- 파일정보 이미지정보 -->
+	<select id="travel_log_file" resultType="FileAndHashVO">
+		select a.file_content file_content, a.board_code board_code
+		from attached_file a
+		right join (select board_code
+					from board   
+					where group_Code = #{group}
+					and share_type = 1
+					and board_date between timestamp(#{start}) and timestamp(#{end})
+					and board_content != '0'
+					order by board_date) b
+		on a.board_code = b.board_code
+		where file_content is not null
+	</select>
+	<!-- 해쉬 -->
+	<select id="travel_log_hash" resultType="FileAndHashVO">
+		select a.hash_tag_content hash_tag_content, a.board_code board_code
+		from hash_tag a
+		right join (select board_code
+					from board   
+					where group_Code = #{group}
+					and share_type = 1
+					and board_date between timestamp(#{start}) and timestamp(#{end})
+					and board_content != '0'
+					order by board_date) b
+		on a.board_code = b.board_code
+		where hash_tag_content is not null
+	</select>
+	
+	<select id="replyTravelList" resultType="LogBoardVO">
+		select a.board_code board_code, a.board_content board_content, a.board_date board_date, a.board_type_code board_type_code, 
+		a.user_id user_id, a.reply_code reply_code, a.write_type write_type, b.user_profile user_profile
+		from board a, user_info b
+		where a.user_id = b.user_id
+		and reply_code = #{no} and board_type_code = 6 
+		order by board_date desc
+		limit #{page}, #{recordNum}
+	</select>
+	<select id="replyTravelTotalCount" resultType="int">
+		select count(reply_code) reply
+		from board
+		where reply_code = #{post} and board_type_code = 6
+	</select>
+	
+</mapper>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+       "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+       "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+ <!-- /WEB-INF/views/layout.jsp 메인경로 -->
+ <!-- /WEB-INF/views/layouts/header.jsp 모듈경로 나누기 -->
+ <!-- /WEB-INF/views/layouts/content.jsp 모듈경로 나누기 -->
+ <!-- /WEB-INF/views/layouts/footer.jsp 모듈경로 나누기 -->
+<tiles-definitions>
+	 <definition name="layout" template="/WEB-INF/views/layout.jsp">
+	        <put-attribute name="header" value="/WEB-INF/views/layouts/header.jsp" />
+	        <put-attribute name="content" value="/WEB-INF/views/layouts/content.jsp" />
+	        <put-attribute name="footer" value="/WEB-INF/views/layouts/footer.jsp" />
+	 </definition>
+	  
+	 <!-- layout하나를 나타냄. body태그안에 넣음-->
+	 <!-- body=content태그를 갈아끼움 -->
+	 <definition name="*" extends="layout">
+	        <put-attribute name="content" expression="/WEB-INF/views/{1}.jsp" />
+	 </definition>
+	 
+	 <definition name="*/*" extends="layout">
+	        <put-attribute name="content" expression="/WEB-INF/views/{1}/{2}.jsp" />
+	 </definition>
+</tiles-definitions>

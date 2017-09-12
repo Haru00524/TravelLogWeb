@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zara.zio.placeMapper">
+	<insert id="place_insert"> <!-- 정보 isnert -->
+		insert into place_tbl(place_code, place_name, place_content, place_address, place_lat, place_lng, place_type, place_on)
+		values (#{place_code}, #{place_name}, #{place_content}, #{place_address}, #{place_lat}, #{place_lng}, #{place_type}, #{place_on})
+	</insert>
+	<insert id="img_insert"> <!-- 이미지 isnert -->
+		insert into pimg_tbl (place_code, img_code, place_img, file_name) values (#{place_code}, #{img_code}, #{place_img}, #{file_name})
+	</insert>
+	
+	<select id="place_max" resultType="int"> <!-- 인설트후 맥스값 구하기 -->
+		SELECT max(place_code)
+		FROM place_tbl 
+	</select>
+	<select id="place_list" resultType="PlaceVO">
+		select *
+		from place_tbl
+		order by place_code desc
+		limit #{startRecord}, #{recordPage}
+	</select>
+	<select id="totalCount" resultType="Integer">
+		select count(*)
+		from place_tbl
+	</select>
+	<select id="read" resultType="PlaceVO"> <!-- mybatis-config.xml에서 "web.spr.bbs.bean.BoardVO"를 "BoardVO"로 생략 -->
+		select a.*, b.user_profile
+		from place_tbl a, user_info b
+		where a.user_id = b.user_id 
+		and place_code = #{no}
+	</select>
+	<select id="read_img" resultType="PlaceVO">
+		select * 
+		from pimg_tbl
+		where place_code = #{no}
+	</select>
+	<select id="creator_img" resultType="java.util.HashMap">
+		select a.user_id user_id, b.user_profile user_profile
+		from place_tbl a, user_info b
+		where a.user_id = b.user_id
+		and a.place_code = #{no}
+	</select>
+	
+	<select id="read_local" resultType="PlaceVO">
+		select a.place_code AS place_code, a.place_name AS place_name, a.place_content AS place_content, 
+		a.place_address AS place_address, a.place_lat AS place_lat, a.place_lng AS place_lng, 
+		a.place_type AS place_type, b.place_img AS place_img
+		from place_tbl a, pimg_tbl b
+		where a.place_code = b.place_code
+		and a.place_address like #{local}
+		and b.img_code = 0
+	</select>
+	
+	<!-- 장소정보 조회  -->
+	<select id="place_info_list" resultType="PlaceVO" parameterType="PlaceInfoListVO">
+		select a.place_code place_code, a.place_name place_name, a.place_content place_content, 
+		a.place_address place_address, a.place_lat place_lat, a.place_lng place_lng, 
+		a.place_type place_type, a.add_date add_date, a.user_id user_id, a.view view,
+		b.place_img place_img, c.wishcount wishcount, c.wish wish
+		from place_tbl a
+		left join pimg_tbl b
+		on a.place_code = b.place_code
+		left join (select a.place_code, count(a.place_code) wishcount, b.user_id wish
+									   from wish_check a
+									   left join (select place_code, user_id
+							           			  from wish_check 
+							           			  where user_id = #{users}) b
+									   on a.place_code = b.place_code
+									   group by place_code) c
+		on a.place_code = c.place_code
+		where b.img_code = 0 and place_on = 1
+		<include refid="search"></include>
+		order by place_code desc
+		limit #{startRecord}, #{recordPage}
+	</select>
+	
+	<!-- 장소 토탈카운트 -->
+	<select id="place_info_count" resultType="int" parameterType="PlaceInfoListVO">
+		select count(*)
+		from place_tbl
+		where place_on = 1 <!-- 장소가 온일때 --> 
+		<include refid="search"></include>
+	</select>
+	
+	<sql id="search">
+		<!-- local_value : 장소정보 -->
+		<!-- thema_value : 테마정보 -->
+		<!-- search_value : 검색정보 -->
+		<if test="local_value.equals('locals_all')">
+			<if test="thema_value.equals('thema_all')">
+				<!-- 전체조회 -->
+				<choose>
+					<when test="search_value.isEmpty()">
+					</when>
+					<otherwise>
+						and place_name like CONCAT('%', #{search_value}, '%')
+					</otherwise>
+				</choose>
+			</if>
+		</if>
+		<!-- 전체기본값  -->
+		
+		<if test="local_value.equals('locals_all')">
+			<if test="!(thema_value.equals('thema_all'))">
+				<choose>
+					<when test="search_value.isEmpty()">
+						and place_type like CONCAT('%', #{thema_value}, '%')
+					</when>
+					<otherwise>
+						and place_type like CONCAT('%', #{thema_value}, '%')
+						and place_name like CONCAT('%', #{search_value}, '%')
+					</otherwise>
+				</choose>
+			</if>
+		</if>
+		<!-- 장소전체 and 테마지정 -->
+		
+		<if test="!(local_value.equals('locals_all'))">
+			<if test="thema_value.equals('thema_all')">
+				<choose>
+					<when test="search_value.isEmpty()">
+						and place_address like CONCAT('%', #{local_value}, '%')
+					</when>
+					<otherwise>
+						and place_address like CONCAT('%', #{local_value}, '%')
+						and place_name like CONCAT('%', #{search_value}, '%')
+					</otherwise>
+				</choose>
+			</if>
+		</if>
+		<!-- 장소지정 and 테마전체 -->
+		
+		<if test="!(local_value.equals('locals_all'))">
+			<if test="!(thema_value.equals('thema_all'))">
+				<choose>
+					<when test="search_value.isEmpty()">
+						and place_type like CONCAT('%', #{thema_value}, '%')
+						and place_address like CONCAT('%', #{local_value}, '%')
+					</when>
+					<otherwise>
+						and place_type like CONCAT('%', #{thema_value}, '%')
+						and place_address like CONCAT('%', #{local_value}, '%')
+						and place_name like CONCAT('%', #{search_value}, '%')
+					</otherwise>
+				</choose>
+			</if>
+		</if>
+		<!-- 장소지정 and 테마지정 -->
+		
+	</sql>
+	
+	<update id="place_update">
+		update place_tbl set place_name=#{v.place_name}, place_content=#{v.place_content}, place_address=#{v.place_address}, 
+		place_lat=#{v.place_lat}, place_lng=#{v.place_lng}, place_type=#{v.place_type}, place_on=#{v.place_on}
+		where place_code = #{no}
+	</update>
+	
+	<delete id="placeAll_delete">
+		delete from place_tbl where place_code = #{no}
+	</delete>
+	<delete id="pimg_delete">
+		delete from pimg_tbl where place_code = #{no}
+	</delete>
+	
+	<select id="placeFilter" resultType="PlaceVO">
+      	select a.place_code ,a.place_name, a.place_content, a.place_address, a.place_lat , a.place_lng, a.place_type, b.place_img
+      	from place_tbl a, pimg_tbl b
+      	where a.place_code = b.place_code and a.place_address like CONCAT('%', #{place_address} , '%') 
+      	and a.place_type = #{place_type} and b.img_code = 0;     
+   	</select>
+   
+   	<select id="searchAllFilter" resultType="PlaceVO">
+      	select a.place_code ,a.place_name, a.place_content, a.place_address, a.place_lat , a.place_lng, a.place_type, b.place_img
+      	from place_tbl a, pimg_tbl b
+      	where a.place_code = b.place_code and a.place_name like CONCAT('%', #{place_name} , '%') and b.img_code = 0;
+   	</select>
+   
+   	<select id="searchLocalFilter" resultType="PlaceVO">
+      	select a.place_code , a.place_name, a.place_content, a.place_address, a.place_lat , a.place_lng, a.place_type, b.place_img
+      	from place_tbl a, pimg_tbl b
+      	where a.place_code = b.place_code and a.place_name like CONCAT('%', #{place_name} , '%') 
+      	and place_address like CONCAT('%', #{place_address} ,'%') and b.img_code = 0;
+   	</select>
+   	
+   	<select id="placeDetail" resultType="PlaceVO">
+   		select a.place_code, place_name, place_content, place_address, place_lat, place_lng, place_type , b.place_img 
+   		from place_tbl a, pimg_tbl b 
+   		where a.place_code = b.place_code and a.place_code = #{place_code} 
+   		and b.img_code = 0; 
+   	</select>
+	
+</mapper>

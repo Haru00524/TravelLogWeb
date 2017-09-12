@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zara.zio.placeCommandMapper">
+	
+	<insert id="wishLike">
+		insert into wish_check (place_code, user_id) values (#{place_code}, #{user_id})
+	</insert>
+	
+	<delete id="wishUnLike">
+		delete from wish_check 
+		where place_code = #{place_code}
+		and user_id = #{user_id}
+	</delete>
+	
+	<select id="wishCount" resultType="int">
+		select count(place_code) count
+		from wish_check
+		where place_code = #{no}
+	</select>
+	
+	<select id="myWish" resultType="int">
+		select count(user_id) myWish
+		from wish_check
+		where place_code = #{place_code}
+		and user_id = #{user_id}
+	</select>
+	
+	<!-- placeReply 작성 -->
+	<insert id="replyPlaceWrite">
+		insert into board (board_code, board_content, board_type_code, user_id, place_reply_code, place_score) 
+		values (#{board_code}, #{board_content}, 7, #{user_id}, #{place_reply_code}, #{place_score})
+	</insert>
+	<update id="replyPlaceModify">
+		update board set board_content=#{board_content}, place_score=#{place_score}
+		where board_code = #{board_code}
+	</update>
+	<delete id="replyPlaceDelete">
+		delete from board
+		where board_code = #{no}
+	</delete>
+	
+	<select id="replyPlaceList" resultType="ReplyInfoVO">
+		select a.board_code, a.board_content, a.board_date, a.board_type_code, a.place_reply_code, a.place_score, a.user_id, b.user_profile
+		from board a, user_info b
+		where a.user_id = b.user_id
+		and board_type_code = 7
+		and place_reply_code = #{replyno}
+		order by board_date
+	</select>
+	
+	<select id="placeRead" resultType="PlaceVO"> <!-- mybatis-config.xml에서 "web.spr.bbs.bean.BoardVO"를 "BoardVO"로 생략 -->
+		select a.*, b.user_profile
+		from place_tbl a, user_info b
+		where a.user_id = b.user_id 
+		and place_code = #{no}
+	</select>
+	<select id="placeRead_img" resultType="PlaceVO">
+		select * 
+		from pimg_tbl
+		where place_code = #{no}
+	</select>
+	
+	<update id="placeView">
+		update place_tbl set view = view + 1
+		where place_code = #{no}
+	</update>
+	
+	<select id="placeRecent" resultType="PlaceVO">
+		SELECT a.place_code place_code, a.place_content place_content, a.add_date add_date, b.place_img place_img
+		FROM place_tbl a
+		left join pimg_tbl b
+		on a.place_code = b.place_code
+		where img_code = 0
+		order by place_code desc
+		limit 0,5
+	</select>
+	
+	<select id="placePopular" resultType="PlaceVO">
+		SELECT a.place_code place_code, a.place_content place_content, a.add_date add_date, b.place_img place_img, c.wishcount wishcount
+		FROM place_tbl a
+		left join pimg_tbl b
+		on a.place_code = b.place_code
+		left join (select place_code, count(place_code) wishcount
+				   from wish_check
+				   group by place_code) c
+		on a.place_code = c.place_code
+		where b.img_code = 0
+		order by wishcount desc
+		limit 0,5
+	</select>
+	
+	
+
+</mapper>

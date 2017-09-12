@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- sql문은 mapper에 작성 -->
+<mapper namespace="zara.zio.layers">
+	<select id="gif_image_list" resultType="String">
+		select a.file_content from attached_file a, board b
+		where b.board_code = a.board_code and b.user_id =#{user_id}
+	</select>
+</mapper>

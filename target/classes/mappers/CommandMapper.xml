@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- sql문은 mapper에 작성 -->
+<mapper namespace="zara.zio.turndMapper">
+		<!-- id를 지정함으로써 구분 -->
+	<insert id="user_create">
+		insert into user_info(user_id, user_pass, user_gender, user_birth , user_phone, user_email, user_profile)
+		values (#{user_id}, #{user_pass}, #{user_gender}, #{user_birth} ,#{user_phone}, #{user_email}, #{user_profile})
+	</insert>
+	<select id="user_read" resultType="MemberVO"> <!-- mybatis-config.xml에서 "zara.zio.turn.domain.MemberVO"를 "MemberVO"로 생략 -->
+		select * 
+		from user_info
+		where user_id=#{user_id}
+	</select>
+	<update id="user_update">
+		update user_info set user_id=#{m.user_id}, user_pass=#{m.user_pass}, user_birth=#{m.user_birth}, 
+		user_gender=#{m.user_gender}, user_phone=#{m.user_phone}, user_email=#{m.user_email}, user_profile=#{m.user_profile}
+		where user_id=#{nowuser}
+	</update>
+	<delete id="user_delete">
+		delete from user_info
+		where user_id=#{user_id}
+	</delete>
+	<select id="user_listAll" resultType="MemberVO"> <!-- 레코드 요소 객체타입을 명시 -->
+		select * 
+		from user_info
+		order by user_date desc
+		limit #{startRecord}, #{recordPage}
+	</select>
+	<select id="id_confirm" resultType="int"> <!-- 중복아이디 체크 -->
+		select count(*) as cnt
+		from user_info
+		where user_id=#{user_id}
+	</select>
+	<select id="user_confirm" resultType="String"> <!-- 로그인 체크  -->
+		select user_pass
+		from user_info
+		where user_id=#{user_id}
+	</select>
+	<select id="totalAll" resultType="Integer">
+		select count(*)
+		from user_info
+	</select>
+	
+	<!-- 친구관련 커맨드 -->
+    <select id="friendSearch" resultType="java.util.HashMap">
+      	select user_id, user_profile
+      	from user_info 
+      	where user_id like CONCAT(#{search}, '%')
+    </select>
+    <select id="friendAll" resultType="java.util.HashMap">
+     	 select user_id, friend_id, friend_accept
+      	 from friend_list
+     	 where user_id = #{id} or friend_id = #{id}
+   	</select>
+   
+   <select id="friendList" resultType="java.util.HashMap">
+      select b.user_id user_id, a.user_profile user_profile, b.friend_id friend_id, b.friend_accept friend_accept
+      from user_info a, friend_list b
+      where a.user_id = b.friend_id 
+      and b.user_id = #{id}
+      union
+      select b.user_id user_id, a.user_profile user_profile, b.friend_id friend_id, b.friend_accept friend_accept
+      from user_info a, friend_list b
+      where a.user_id = b.user_id 
+      and b.friend_id = #{id}
+   </select>
+   
+   <insert id="friendReq">
+      insert into friend_list(user_id, friend_id, friend_accept)
+      values (#{my_id}, #{user_id}, 0)
+   </insert>
+   <delete id="friendDelCancel">
+       delete from friend_list
+       where user_id = #{my_id} and friend_id = #{user_id}
+      or friend_id = #{my_id} and user_id = #{user_id}
+   </delete>
+   <update id="friendAccept">
+      update friend_list set friend_accept = 1
+      where user_id = #{my_id} and friend_id = #{user_id}
+      or friend_id = #{my_id} and user_id = #{user_id}
+   </update>
+</mapper>

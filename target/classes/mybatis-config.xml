@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+  PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<typeAliases>
+		<typeAlias alias="ReplyInfoVO" type="zara.zio.turn.domain.ReplyInfoVO" />
+		<typeAlias alias="StepLogVO" type="zara.zio.turn.domain.StepLogVO" />
+		<typeAlias alias="FileAndHashVO" type="zara.zio.turn.domain.FileAndHashVO" />
+		<typeAlias alias="LikesVO" type="zara.zio.turn.domain.LikesVO" />
+		<typeAlias alias="ComunityVO" type="zara.zio.turn.domain.ComunityVO" />
+		<typeAlias alias="LogBoardVO" type="zara.zio.turn.domain.LogBoardVO" />
+		<typeAlias alias="MaterialVO" type="zara.zio.turn.domain.MaterialVO" />
+		<typeAlias alias="FriendListVO" type="zara.zio.turn.domain.FriendListVO" /> 
+		<typeAlias alias="PlaceInfoListVO" type="zara.zio.turn.domain.PlaceInfoListVO" /> 
+		<typeAlias alias="TravelListVO" type="zara.zio.turn.domain.TravelListVO" /> 
+		<typeAlias alias="GroupVO" type="zara.zio.turn.domain.GroupVO" /> 
+		<typeAlias alias="MemberVO" type="zara.zio.turn.domain.MemberVO" />
+		<typeAlias alias="PlaceVO" type="zara.zio.turn.domain.PlaceVO" />
+		<typeAlias alias="ChattingVO" type="zara.zio.turn.domain.ChattingVO"/> 
+		<typeAlias alias="Income_disbursementVO" type="zara.zio.turn.domain.Income_disbursementVO"/> 
+		<typeAlias alias="String" type="java.lang.String" />
+		<typeAlias alias="GroupApplicationVO" type="zara.zio.turn.domain.GroupApplicationVO" />
+		<!-- typeAliases를 취함으로써  "zara.zio.turn.domain.MemberVO"를 "MemberVO"로 생략가능 -->
+	</typeAliases>
+</configuration>

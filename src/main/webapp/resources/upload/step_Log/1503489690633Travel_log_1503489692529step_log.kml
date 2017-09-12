@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+ <Document xmlns="">
+  <name>kakao 발자취</name>
+  <open>1</open>
+  <Style id="lineStyle">
+   <LineStyle>
+    <Color>7f0000ff</Color>
+    <width>4</width>
+   </LineStyle>
+  </Style>
+  <Placemark>
+   <name>LineStyle</name>
+   <styleUrl>#lineStyle</styleUrl>
+   <LineString>
+    <extrude>1</extrude>
+    <tessellate>1</tessellate>
+    <coordinates />
+   </LineString>
+  </Placemark>
+ </Document>
+</kml>
+

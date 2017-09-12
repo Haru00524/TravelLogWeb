@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zara.zio.groupTravelMapper">
+
+	<!-- Group 단 -->
+	<select id="friendList" resultType="MemberVO">
+		select user_profile , user_id from user_info
+		where user_id in
+		(select CONCAT(replace(user_id,#{user_id},'') ,
+		replace(friend_id,#{user_id},'') ) as friend_id from friend_list where
+		user_id=#{user_id} or friend_id=#{user_id} and friend_accept = 1)
+	</select>
+
+	<insert id="group_insert">
+		insert into travel_group (travel_Title, start_Date, end_Date, local)
+		values(#{travel_Title}, #{start_Date} , #{end_Date}, #{local})
+	</insert>
+
+	<select id="groupCode" resultType="int">
+		select max(group_Code) from travel_group ;
+	</select>
+
+	<insert id="groupApplicationCreate">
+		insert into group_application (user_id, group_Code, group_apply,
+		invite_user)
+		values(#{user_id} , #{group_Code}, #{group_apply} , #{invite_user})
+	</insert>
+
+	<!-- Travel 단 -->
+
+	<select id="travel_place" resultType="int">
+		select count(*) from travel_list where travel_Date = #{travel_Date} and
+		group_Code = #{group_Code}
+	</select>
+
+	<insert id="planList_insert">
+		insert into travel_list (travel_Date, place_code, group_Code,
+		travel_priority)
+		values(#{travel_Date}, #{place_code} , #{group_Code} , #{travel_priority})
+	</insert>
+
+	<select id="planDayList" resultType="TravelListVO">
+		select b.place_code, b.travel_priority, b.travel_Memo, a.place_lat AS place_lat,
+		a.place_lng , c.place_img , a.place_name
+		from place_tbl a , travel_list b, pimg_tbl c
+		where a.place_code = b.place_code
+		and a.place_code = c.place_code
+		and b.group_Code=#{group_Code}
+		and travel_Date=#{travel_Date}
+		and c.img_code = 0
+		order by travel_priority;
+	</select>
+
+	<update id="planPriority">
+		update travel_list set travel_priority=#{count}
+		where travel_Date = #{travel_Date}
+		and group_Code = #{group_Code}
+		and place_code = #{place_code}
+		and travel_priority = #{travel_priority}
+		order by travel_priority
+	</update>
+
+	<delete id="planDelete">
+		delete from travel_list where travel_Date = #{travel_Date}
+		and group_Code = #{group_Code}
+		and place_code = #{place_code}
+	</delete>
+
+	<select id="planRealTimePriority" resultType="TravelListVO">
+		select place_code, travel_priority from travel_list
+		where travel_Date = #{travel_Date}
+		and group_Code = #{group_Code}
+	</select>
+
+	<select id="material_list" resultType="MaterialVO">
+		select material_code, user_id, group_Code, material_name, material_type,
+		manager_check
+		from material
+		where (group_Code = #{group_Code}) and user_id = #{user_id} or
+		manager_check = 1
+	</select>
+
+	<insert id="material_insert">
+		insert into material (user_id, group_Code, material_name,
+		material_type,manager_check)
+		values( #{user_id}, #{group_Code} ,#{material_name}, "개인", #{manager_check})
+	</insert>
+
+	<select id="material_code" resultType="int">
+		select material_code
+		from material
+		where user_id = #{user_id} and material_name = #{material_name} and
+		(group_Code = #{group_Code} )
+		union
+		select material_code from material
+		where material_name = #{material_name} and group_Code = 0
+	</select>
+
+	<insert id="material_check">
+		insert into material_check(group_Code, user_id, material_code)
+      	values(#{group_Code}, #{user_id} , #{material_code})
+	</insert>
+
+	<select id="material_checked" resultType="MaterialVO">
+		select material_code from material_check where group_Code = #{group_Code}
+		and user_id = #{user_id}
+	</select>
+
+	<delete id="deleteCheckMaterial">
+		delete from material_check where user_id = #{user_id} and group_Code =
+		#{group_Code} and material_code = #{material_code}
+	</delete>
+
+	<delete id="materialDelete">
+		delete from material where user_id = #{user_id} and group_Code =
+		#{group_Code} and material_code = #{material_code}
+	</delete>
+
+	<update id="limit_cost_update">
+		update travel_group set coin_Limit = #{coin_limit} , sc_Division =
+		#{sc_Division} where group_Code = #{group_Code}
+	</update>
+
+	<select id="chattingList" resultType="ChattingVO">
+		select * from chatting where group_Code = #{group_Code} ;
+	</select>
+
+	<insert id="chattingStore">
+		insert into chatting (group_Code, chatting_content, user_id, chatting_date)
+		values (#{group_Code} , #{chatting_content} , #{user_id},
+		#{chatting_date})
+	</insert>
+
+	<select id="groupGoingList" resultType="GroupVO">
+		select a.group_Code, travel_Title, start_Date, end_Date
+		from
+		group_application a, travel_group b
+		where a.group_Code = b.group_Code
+		and a.user_id = #{user_id} and group_apply = 1
+		and start_Date >=
+		CURRENT_DATE( );
+	</select>
+
+	<select id="groupFinishList" resultType="GroupVO">
+   <![CDATA[
+   		select a.group_Code, travel_Title, start_Date, end_Date
+		from group_application a, travel_group b
+		where a.group_Code = b.group_Code and a.user_id = #{user_id} and group_apply = 1
+		and start_Date < CURRENT_DATE( );
+	]]>
+	</select>
+
+	<delete id="user_group_delete">
+		delete from travel_group where group_Code = #{group_Code}
+	</delete>
+
+	<select id="user_group_delete_check" resultType="int">
+		select count(*) from group_application where group_Code = #{group_Code} and group_apply != 0
+	</select>
+
+	<delete id="user_groupApplication_delete">
+		delete from group_application where group_Code = #{group_Code} and user_id = #{user_id}
+	</delete>
+
+	<select id="user_plan_list" resultType="TravelListVO">
+		select travel_priority, travel_Date, group_Code, b.place_code, place_name,
+		place_lat, place_lng , c.place_img
+		from travel_list a, place_tbl b, pimg_tbl c
+		where a.place_code = b.place_code and b.place_code = c.place_code and
+		travel_Date in (select travel_Date from travel_list where group_Code =
+		#{place_Code} group by travel_Date)
+		and group_Code = #{place_Code} and c.img_code =0
+		order by travel_Date , travel_priority
+	</select>
+	<select id="travel_cost" resultType="String">
+		select sc_Division from travel_group where group_Code = #{group_Code}
+	</select>
+	<select id="travel_cost_list" resultType="Income_disbursementVO">
+		SELECT a.user_id , b.*, c.coin_Limit, c.sc_Division
+		from write_travel a,
+		income_disbursement_tbl b, travel_group c
+		where a.expense_Code =
+		b.expense_Code
+		and a.group_Code = c.group_Code
+		and a.group_Code = #{group_Code}
+	</select>
+
+	<select id="travel_supplies_list" resultType="MaterialVO">
+		select a.material_code, a.material_name, a.material_type, b.user_id
+		from
+		material a, material_check b
+		where a.material_code = b.material_code
+		and b.group_Code = #{group_Code};
+	</select>
+
+	<select id="travel_modify" resultType="GroupVO">
+		select * from travel_group where group_Code = #{group_Code}
+	</select>
+
+	<select id="group_travel_alarm" resultType="GroupApplicationVO">
+		select a.*, b.user_profile
+		from group_application a
+		left join user_info b
+		on a.invite_user = b.user_id
+		where group_apply = 0
+		order by user_id desc;
+	</select>
+
+	<update id="group_alarm_update">
+		update group_application set group_apply = 1
+		where group_Code=#{group_Code}
+		and user_id=#{user_id}
+	</update>
+
+	<delete id="group_alarm_delete">
+		delete from group_application where group_Code = #{group_Code} and user_id =
+		#{user_id}
+	</delete>
+
+	<!-- friend 단 -->
+	<select id="plan_friend_list" resultType="MemberVO">
+		select a.user_id,user_profile, b.group_apply
+		from user_info a, (select * from group_application 
+						   where group_Code = #{group_Code} and user_id not in (#{user_id}) ) b
+		where a.user_id = b.user_id
+	</select>
+
+	<select id="friend_search_list" resultType="MemberVO">
+		select user_profile , user_id from user_info
+		where user_id in (select CONCAT(replace(user_id, #{user_id} ,'') ,
+		replace(friend_id, #{user_id} ,'') ) as friend_id from friend_list
+		where user_id = #{user_id} or friend_id = #{user_id} and friend_accept = 1)
+		and user_id like CONCAT('%', #{friend_name} , '%')
+	</select>
+
+	<delete id="groupApplication_cancel">
+		delete from group_application where user_id = #{user_id} 
+		and group_Code = #{group_Code}
+	</delete>
+
+	<!-- 여행계획 상세에서 타임라인 -->
+	<select id="travel_timeline" resultType="LogBoardVO">
+		<!-- select * from board a, attached_file b where board_type_code = 1 and 
+			user_id IN ( select user_id from group_application where group_Code = #{group_Code}) 
+			or a.board_code = b.board_code and board_date between #{start_Date} and #{end_Date} -->
+		select * from board a Left outer join attached_file b
+		on a.board_code = b.board_code
+		where a.board_type_code = 2 and a.group_Code = #{group_Code} and board_content != "0"
+		order by board_date
+	</select>
+	<!-- 여행계획을 만들고 board 테이블에 travel_Log 생성 -->
+	<insert id="groupTravelBoard">
+		insert into board (board_title, board_date, share_type, board_type_code, user_id, group_Code)
+		values(#{travel_title}, #{reserve}, #{openset}, 2, #{user_id}, #{group_Code})
+	</insert>
+
+	<update id="groupTravelMemo">
+		update travel_list set travel_Memo=#{memo}
+		where travel_Date = #{travel_Date}
+		and group_Code = #{group_Code}
+		and travel_Priority = #{travel_priority}
+	</update>
+
+	<select id="groupTravelMemoText" resultType="String">
+		select travel_Memo from travel_list
+		where group_Code = #{group_Code} and travel_Priority = #{travel_priority}
+		and travel_Date = #{travel_Date}
+	</select>
+</mapper>
